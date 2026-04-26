@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: realations
+      POSTGRES_PASSWORD: realations
+      POSTGRES_DB: realations
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U realations"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      REALATIONS_DATABASE_URL: postgresql+psycopg://realations:realations@db:5432/realations
+      REALATIONS_JWT_SECRET: please-change-in-production
+      REALATIONS_ENVIRONMENT: dev
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: >-
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - .:/app
+
+volumes:
+  pgdata: {}
